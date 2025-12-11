@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ПАРКИ АЛМАТЫ | КазГАСА</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+    <style>
+        /* --- Основные стили (Зеленая тема) --- */
+        :root {
+            --primary-color: #2e7d32; /* Темно-зеленый */
+            --secondary-color: #4caf50; /* Светло-зеленый */
+            --accent-color: #81c784;
+            --text-color: #333;
+            --bg-color: #f1f8e9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        /* --- Навигация --- */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+        }
+
+        .nav-links li {
+            margin-left: 20px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-color);
+        }
+
+        /* --- Разделы --- */
+        section {
+            padding: 60px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            border-bottom: 3px solid var(--secondary-color);
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+        
+        .center-header {
+            text-align: center;
+        }
+
+        /* --- Главная --- */
+        #home {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://eurasia.travel/wp-content/uploads/2024/10/Almaty-city-1024x683.jpg');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border-radius: 0 0 20px 20px;
+        }
+
+        #home h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+
+        #home p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        /* --- Парки (Сетка) --- */
+        .parks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .park-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .park-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .park-card img {
+            width: 100%;
+            height: 250px; 
+            object-fit: cover;
+        }
+
+        .park-info {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .park-info h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+        
+        .park-info p {
+            flex-grow: 1;
+        }
+
+        .btn-route {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 12px 20px;
+            background-color: var(--secondary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+            transition: background 0.3s;
+            text-align: center;
+        }
+
+        .btn-route:hover {
+            background-color: var(--primary-color);
+        }
+
+        /* --- Карта --- */
+        #map-container {
+            position: relative;
+            height: 600px;
+            width: 100%;
+            border: 5px solid var(--primary-color);
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+        }
+        
+        /* Стили для панели маршрутизатора Leaflet Routing Machine */
+        .leaflet-routing-container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 0 5px 5px 0;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            max-height: 90%;
+            overflow-y: auto;
+        }
+        
+        .map-controls {
+            margin-bottom: 20px;
+            text-align: center;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid var(--primary-color);
+            max-width: 100%;
+            margin-top: 10px;
+        }
+
+        /* --- БЛОК ДЛЯ ДЕТАЛЕЙ МАРШРУТА --- */
+        #route-details {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--secondary-color);
+            display: none;
+        }
+        
+        #route-details h3 {
+            color: var(--primary-color);
+            border-bottom: 2px dashed var(--accent-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        
+        .detail-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: var(--bg-color);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .detail-item strong {
+            color: var(--primary-color);
+            margin-right: 10px;
+            min-width: 120px;
+        }
+
+        /* --- Контакты и Футер (стили без изменений) --- */
+        .contact-info {
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            font-size: 1.2rem;
+        }
+        
+        .contact-info strong {
+            color: var(--primary-color);
+        }
+
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            #home h1 { font-size: 2.5rem; }
+            .nav-links { display: none; }
+            .park-card img { height: 200px; }
+            .detail-item { display: block; }
+            .detail-item strong { min-width: auto; display: block; margin-bottom: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <div class="logo">ПАРКИ АЛМАТЫ</div>
+            <ul class="nav-links">
+                <li><a href="#home">Главная</a></li>
+                <li><a href="#parks">Парки</a></li>
+                <li><a href="#map-section">Карта</a></li>
+                <li><a href="#contacts">Контакты</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section id="home">
+        <h1>Зеленый Алматы</h1>
+        <p>Добро пожаловать на путеводитель по лучшим паркам города. 
+            Насладитесь природой, найдите лучшие места для отдыха и постройте 
+            удобный маршрут прямо от вашего университета.</p>
+    </section>
+
+    <section id="parks">
+        <div class="center-header">
+            <h2>Галерея Парков</h2>
+        </div>
+        <div class="parks-grid">
+            
+            <div class="park-card">
+                <img src="https://sxodim.com/uploads/posts/2023/04/03/optimized/e46ca65832e60bfe3959b6c3864311f6_1400x790-q-85.jpg" alt="Парк Первого Президента">
+                <div class="park-info">
+                    <h3>Парк Первого Президента</h3>
+                    <p>Крупнейший дендропарк с поющими фонтанами, колоннадой и великолепным видом на горы Заилийского Алатау.</p>
+                    <button class="btn-route" onclick="buildRouteTo(0)">Построить маршрут</button>
+                </div>
+            </div>
+
+            <div class="park-card">
+                 <img src="https://sxodim.com/uploads/posts/2023/04/11/optimized/cd32d400b0dd9c1186721be9f6bb3dfd_1522x570-q-85.jpg" alt="Парк Горького">
+                <div class="park-info">
+                    <h3>Центральный парк (Горького)</h3>
+                    <p>Любимое место отдыха горожан с озером, аттракционами, аквапарком и зоопарком. Много зелени и тенистых аллей.</p>
+                    <button class="btn-route" onclick="buildRouteTo(1)">Построить маршрут</button>
+                </div>
+            </div>
+
+            <div class="park-card">
+                 <img src="https://koktobe.com/storage/pages/October2024/6SS4GYPLusA7JXFtDqHW.png" alt="Кок-Тобе">
+                <div class="park-info">
+                    <h3>Парк Кок-Тобе</h3>
+                    <p>Парк на вершине горы. Знаменитая телебашня, панорамные виды на город, контактный зоопарк и памятник The Beatles.</p>
+                    <button class="btn-route" onclick="buildRouteTo(2)">Построить маршрут</button>
+                </div>
+            </div>
+
+            <div class="park-card">
+                 <img src="https://botsad.kz/storage/39/39c4ded284d5c9a21f29fc86521ba196.jpg" alt="Ботанический Сад">
+                <div class="park-info">
+                    <h3>Главный Ботанический Сад</h3>
+                    <p>«Легкие города». Огромная коллекция растений, Японский сад, пруды с лебедями и тишина в центре мегаполиса.</p>
+                    <button class="btn-route" onclick="buildRouteTo(3)">Построить маршрут</button>
+                </div>
+            </div>
+
+            <div class="park-card">
+                 <img src="https://topphotospots.com/upload/styles/1920/public/loc1614/alm_7753_tps.jpg?itok=H_aKnCXX" alt="28 панфиловцев">
+                <div class="park-info">
+                    <h3>Парк 28 панфиловцев</h3>
+                    <p>Парк памяти и истории. Здесь расположен знаменитый деревянный Вознесенский собор и Мемориал Славы.</p>
+                    <button class="btn-route" onclick="buildRouteTo(4)">Построить маршрут</button>
+                </div>
+            </div>
+            
+            <div class="park-card">
+                <img src="https://sxodim.com/uploads/posts/2023/05/22/optimized/a36cc83898cf56d110647f8ef0e178d6_1400x790-q-85.jpg" alt="Парк им. М. Ганди">
+                <div class="park-info">
+                    <h3>Парк имени Махатмы Ганди</h3>
+                    <p>Тихий и уютный парк с розарием и памятником Ганди. Идеальное место для неспешных прогулок и медитации.</p>
+                    <button class="btn-route" onclick="buildRouteTo(5)">Построить маршрут</button>
+                </div>
+            </div>
+
+            <div class="park-card">
+                <img src="https://avatars.mds.yandex.net/get-altay/6477742/2a0000018c524809a96452d10d902b6fc4d9/L_height" alt="Парк Южный">
+                <div class="park-info">
+                    <h3>Парк Южный (Сейфуллина)</h3>
+                    <p>Современный парк с зонами для активного отдыха, скейт-парком и прогулочными аллеями. Находится вдоль проспекта Сейфуллина.</p>
+                    <button class="btn-route" onclick="buildRouteTo(6)">Построить маршрут</button>
+                </div>
+            </div>
+
+             <div class="park-card">
+                <img src="https://avatars.mds.yandex.net/get-altay/6159907/2a0000018fb8bdb8df1aee099cdb5d0fdbea/L_height" alt="Парк Фонда Первого Президента (на Фурманова)">
+                <div class="park-info">
+                    <h3>Парк Фонда (Назарбаева)</h3>
+                    <p>Небольшой, но очень зеленый и ухоженный парк в верхней части города с красивыми клумбами и зонами отдыха.</p>
+                    <button class="btn-route" onclick="buildRouteTo(7)">Построить маршрут</button>
+                </div>
+            </div>
+
+            <div class="park-card">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2b/ALAFontanAtakent.JPG" alt="Парк Атакент (ВДНХ)">
+                <div class="park-info">
+                    <h3>Парк Атакент (ВДНХ)</h3>
+                    <p>Многофункциональный выставочный комплекс и парк. Идеален для катания на велосипеде, роликах, проведения мероприятий.</p>
+                    <button class="btn-route" onclick="buildRouteTo(8)">Построить маршрут</button>
+                </div>
+            </div>
+
+
+        </div>
+    </section>
+
+    <section id="map-section">
+        <div class="center-header">
+            <h2>Умная Карта</h2>
+        </div>
+        
+        <div class="map-controls">
+            <label for="destination-select">Маршрут от КазГАСА (ул. Рыскулбекова, 28) до:</label><br>
+            <select id="destination-select" onchange="buildRouteTo(this.value)">
+                <option value="" disabled selected>-- Выберите парк из списка --</option>
+                <option value="0">Парк Первого Президента</option>
+                <option value="1">Парк Горького</option>
+                <option value="2">Кок-Тобе (Канатка)</option>
+                <option value="3">Ботанический сад</option>
+                <option value="4">Парк 28 панфиловцев</option>
+                <option value="5">Парк имени Махатмы Ганди</option>
+                <option value="6">Парк Южный (Сейфуллина)</option>
+                <option value="7">Парк Фонда (Назарбаева)</option>
+                <option value="8">Парк Атакент (ВДНХ)</option>
+            </select>
+            <p style="font-size: 0.9em; color: #555; margin-top: 10px; background: #e8f5e9; padding: 10px; border-radius: 5px; display: inline-block;">
+                🚗 🚶 <strong>Режим навигации:</strong> Карта автоматически выбирает <u>самый короткий и быстрый</u> маршрут.
+            </p>
+        </div>
+
+        <div id="route-details">
+            </div>
+
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+    </section>
+
+    <section id="contacts">
+        <div class="center-header">
+            <h2>Контакты Разработчика</h2>
+        </div>
+        <div class="contact-info">
+            <p><strong>Студент:</strong> Нугман Шерхан</p>
+            <p><strong>Группа:</strong> ГиК 22-1</p>
+            <p><strong>Адрес (Start Point):</strong> ул. Рыскулбекова 28, Университет КазГАСА</p>
+            <p><strong>Город:</strong> Алматы, Казахстан</p>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2024 ПАРКИ АЛМАТЫ. Учебный проект. Нугман Шерхан.</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+    <script>
+        // --- ДАННЫЕ (ОБНОВЛЕНЫ) ---
+        // Начальная точка: КазГАСА (43.205017, 76.874884)
+        const startPoint = {
+            lat: 43.205017, 
+            lng: 76.874884,
+            title: "КазГАСА (ул. Рыскулбекова, 28)"
+        };
+
+        // Конечные точки (Парки) - координаты и приблизительные данные о маршруте
+        const parksData = [
+            { 
+                id: 0, 
+                name: "Парк Первого Президента", 
+                lat: 43.1973, 
+                lng: 76.8868,
+                routeDetails: { driving: { time: "5 мин", distance: "2.5 км" }, transit: { time: "25 мин", buses: "63, 67, 103, 121, 38" }, walking: { time: "25 мин", distance: "2.0 км", calories: "≈ 100 ккал" } }
+            },
+            { 
+                id: 1, 
+                name: "Центральный парк (Горького)", 
+                lat: 43.2593, 
+                lng: 76.9735,
+                routeDetails: { driving: { time: "20 мин", distance: "14.5 км" }, transit: { time: "60 мин", buses: "5, 70, 86, 121" }, walking: { time: "3 ч", distance: "13.0 км", calories: "≈ 650 ккал" } }
+            },
+            { 
+                id: 2, 
+                name: "Парк Кок-Тобе (Канатка)", 
+                lat: 43.2429, 
+                lng: 76.9592,
+                routeDetails: { driving: { time: "20 мин", distance: "13 км" }, transit: { time: "55 мин", buses: "5, 12, 29, 45, 121" }, walking: { time: "2 ч 40 мин", distance: "11.5 км", calories: "≈ 575 ккал" } }
+            },
+            { 
+                id: 3, 
+                name: "Главный Ботанический Сад", 
+                lat: 43.2205, 
+                lng: 76.9150,
+                routeDetails: { driving: { time: "7 мин", distance: "4.5 км" }, transit: { time: "20 мин", buses: "18, 45, 63" }, walking: { time: "35 мин", distance: "3.0 км", calories: "≈ 150 ккал" } }
+            },
+            { 
+                id: 4, 
+                name: "Парк 28 панфиловцев", 
+                lat: 43.2590, 
+                lng: 76.9560,
+                routeDetails: { driving: { time: "25 мин", distance: "13 км" }, transit: { time: "55 мин", buses: "12, 121, 2, 118" }, walking: { time: "2 ч 45 мин", distance: "11.5 км", calories: "≈ 575 ккал" } }
+            },
+            { 
+                id: 5, 
+                name: "Парк имени Махатмы Ганди", 
+                lat: 43.2359, 
+                lng: 76.9372,
+                routeDetails: { driving: { time: "15 мин", distance: "8.0 км" }, transit: { time: "35 мин", buses: "45, 70, 119" }, walking: { time: "1 ч 30 мин", distance: "6.5 км", calories: "≈ 325 ккал" } }
+            },
+            { 
+                id: 6, 
+                name: "Парк Южный (Сейфуллина)", 
+                lat: 43.2081, 
+                lng: 76.9234,
+                routeDetails: { driving: { time: "10 мин", distance: "5.5 км" }, transit: { time: "30 мин", buses: "19, 30, 47, 72" }, walking: { time: "50 мин", distance: "4.0 км", calories: "≈ 200 ккал" } }
+            },
+            { 
+                id: 7, 
+                name: "Парк Фонда (Назарбаева)", 
+                lat: 43.2098, 
+                lng: 76.9315,
+                routeDetails: { driving: { time: "10 мин", distance: "5.0 км" }, transit: { time: "35 мин", buses: "5, 63, 121" }, walking: { time: "55 мин", distance: "4.0 км", calories: "≈ 200 ккал" } }
+            },
+            { 
+                id: 8, 
+                name: "Парк Атакент (ВДНХ)", 
+                lat: 43.2294, 
+                lng: 76.9079,
+                routeDetails: { driving: { time: "10 мин", distance: "5.0 км" }, transit: { time: "25 мин", buses: "18, 30, 45, 121" }, walking: { time: "45 мин", distance: "3.5 км", calories: "≈ 175 ккал" } }
+            }
+        ];
+
+        // --- ИНИЦИАЛИЗАЦИЯ КАРТЫ ---
+        var map = L.map('map').setView([startPoint.lat, startPoint.lng], 13); 
+
+        // Слой карты (OSM)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // --- ИКОНКИ ---
+        var startIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
+
+        var parkIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
+
+        // --- ДОБАВЛЕНИЕ МАРКЕРОВ ---
+        // Старт
+        L.marker([startPoint.lat, startPoint.lng], {icon: startIcon})
+            .addTo(map)
+            .bindPopup("<b>" + startPoint.title + "</b><br>ВАША ТОЧКА ОТПРАВЛЕНИЯ");
+
+        // Парки. Нажатие на маркер строит маршрут.
+        parksData.forEach(function(park) {
+            let marker = L.marker([park.lat, park.lng], {icon: parkIcon})
+                .addTo(map)
+                .bindPopup(`<b>${park.name}</b>`);
+                
+            marker.on('click', function() {
+                buildRouteTo(park.id);
+            });
+        });
+
+        // --- МАРШРУТИЗАЦИЯ ---
+        var routingControl = null;
+        var routeDetailsDiv = document.getElementById('route-details');
+
+        function buildRouteTo(parkId) {
+            // 1. Скролл к карте и обновление селектора
+            document.getElementById('map-section').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('destination-select').value = parkId;
+
+            var targetPark = parksData.find(p => p.id == parkId);
+            if (!targetPark) return;
+
+            // 2. Обновление блока с деталями (текстовая информация)
+            updateRouteDetails(targetPark);
+
+            // 3. Очистка старого маршрута
+            if (routingControl != null) {
+                map.removeControl(routingControl);
+                routingControl = null;
+            }
+
+            // 4. Построение нового маршрута с пошаговыми инструкциями
+            routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(startPoint.lat, startPoint.lng),
+                    L.latLng(targetPark.lat, targetPark.lng)
+                ],
+                routeWhileDragging: false,
+                language: 'ru', // Русский язык
+                showAlternatives: false, 
+                autoRoute: true, 
+                useMarkers: true,
+                lineOptions: {
+                    styles: [{color: '#2e7d32', opacity: 0.8, weight: 6, lineCap: 'round'}]
+                },
+                collapsible: true, // Панель инструкций будет свернута по умолчанию, но ее можно развернуть
+                // Если Вы хотите, чтобы панель была всегда развернута:
+                // collapsed: false 
+            }).on('routesfound', function(e) {
+                // Центрируем и масштабируем карту под маршрут
+                if (e.routes.length > 0) {
+                    map.fitBounds(e.routes[0].bounds, {padding: [50, 50]}); 
+                }
+            }).addTo(map);
+        }
+        
+        // --- ФУНКЦИЯ ОТОБРАЖЕНИЯ ДЕТАЛЕЙ ---
+        function updateRouteDetails(park) {
+            const details = park.routeDetails;
+
+            const htmlContent = `
+                <h3>🗺️ Маршрут от КазГАСА до «${park.name}»</h3>
+                <p style="font-size: 0.9em; color: ${this.primaryColor};">
+                    **Подробные пошаговые инструкции (улицы, повороты)** находятся в панели слева на карте. 
+                </p>
+                
+                <div class="detail-item">
+                    <strong><span style="font-size: 1.2em;">🚗</span> На машине:</strong>
+                    <span>${details.driving.time} / ${details.driving.distance}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <strong><span style="font-size: 1.2em;">🚌</span> На автобусе:</strong>
+                    <span>${details.transit.time} (Автобусы: **${details.transit.buses}**)</span>
+                </div>
+                
+                <div class="detail-item">
+                    <strong><span style="font-size: 1.2em;">🚶</span> Пешком:</strong>
+                    <span>${details.walking.time} / ${details.walking.distance}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <strong><span style="font-size: 1.2em;">🔥</span> Сжигание калорий:</strong>
+                    <span>${details.walking.calories} (при ходьбе пешком)</span>
+                </div>
+                
+                <p style="font-size: 0.9em; color: #777;">*Данные о маршруте являются приблизительными, основаны на оптимальном маршруте и могут меняться в зависимости от пробок и расписания.</p>
+            `;
+
+            routeDetailsDiv.innerHTML = htmlContent;
+            routeDetailsDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
